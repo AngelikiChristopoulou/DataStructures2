@@ -3,9 +3,9 @@
 #include <string.h>
 #include <time.h> // used to count the time each algorithm takes
 
-#define DIRECTION 7
+#define DIRECTION 8
 #define YEAR 4
-#define DATE 8
+#define DATE 10
 #define WEEKDAY 9
 #define MAX_STR 64
 #define MAX_ROWS 111440
@@ -13,8 +13,8 @@
 // Δομ΄η Εγγραφ΄ης 
 typedef struct {
     char direction[DIRECTION];
-    int year[YEAR];
-    int date[DATE];
+    char year[YEAR];
+    char date[DATE];
     char weekday[WEEKDAY];
     char country[MAX_STR];
     char commodity[MAX_STR];
@@ -49,9 +49,22 @@ int load_csv(const char *filename, Record *data) {
         if(!token) continue;
         strncpy(r.direction, token, DIRECTION-1);
 
-        token = strtok(line, ",");
+        token = strtok(NULL, ",");
         if(!token) continue;
-        strncpy(r.date, token, MAX_STR-1);
+        strncpy(r.year, token, YEAR);
 
+        token = strtok(NULL, ",");
+        if(!token) continue;
+        strncpy(r.date, token, DATE);
+
+        
     }
+}
+
+int main() {
+    int x;
+    Record data;
+    x=load_csv("effects-of-covid-19-on-trade-at-15-december-2021-provisional.csv", &data);
+
+    return 0;
 }
