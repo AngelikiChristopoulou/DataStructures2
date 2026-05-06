@@ -24,12 +24,6 @@ typedef struct {
     long long cumulative;
 } Record;
 
-// Δομή κόμου διασυνδεδεμένης λίστας
-typedef struct {
-    Record* data;
-    Node* before;
-    Node* after;
-} Node;
 
 // Φόρτωση στοιχείων
 int load_csv(const char *filename, Record *data) {
@@ -49,11 +43,15 @@ int load_csv(const char *filename, Record *data) {
 
         char *token;
         Record r;
-        mmset(&r, 0, sizeof(r));
+        memset(&r, 0, sizeof(r));
 
         token = strtok(line, ",");
         if(!token) continue;
+        strncpy(r.direction, token, DIRECTION-1);
 
+        token = strtok(line, ",");
+        if(!token) continue;
+        strncpy(r.date, token, MAX_STR-1);
 
     }
 }
