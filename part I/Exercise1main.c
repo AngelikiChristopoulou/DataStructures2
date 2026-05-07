@@ -24,6 +24,14 @@ typedef struct {
     long long cumulative;
 } Record;
 
+static Record* temp_buffer = NULL;
+
+
+// calling functions
+int load_csv(const char *filename, Record *data);
+void counting_sort(Record *input, int recordings, Record *output);
+void merge(Record* array, int left, int current, int right);
+
 
 // Φόρτωση στοιχείων
 int load_csv(const char *filename, Record *data) {
@@ -92,6 +100,7 @@ int load_csv(const char *filename, Record *data) {
     return count;
 }
 
+
 // Counting Sort βασή cumulative
 void counting_sort(Record *input, int recordings, Record *output) {
     if (recordings <= 0) return;
@@ -133,18 +142,129 @@ void counting_sort(Record *input, int recordings, Record *output) {
     }
 
     //summing
-    //for(long i=0;)
+    for(long long i=1; i<range; i++) {
+        count[i] += count[i-1];
+    }
+
+    // building output
+    for(int i=recordings-1; i>=0; i--) {
+        long long index = input[i].cumulative - min;
+        count[index]--;
+        output[count[index]] = input[i];
+    }
+
+    free(count);
+}
+
+
+// Merge sort
+void merge(Record* array, int left, int middle, int right){
+    int l = left;
+    int r = middle+1;
+    int out = left;
+
+    while( l <= middle && r <= right) {
+        if (array[l].cumulative <= array[r].cumulative) {
+            temp_buffer[out++] = array[r++];
+        } else {
+            temp_buffer[out++] = array[l++];
+        }
+    }
+
+    while (l <= middle ) {
+        temp_buffer[out++] = array[l++];
+    }
+
+    while (r <= right ) {
+        temp_buffer[out++] = array[l++];
+    }
+}
+
+void merge_sort(Record* array, int left, int right) {
+    if (left >= right) {
+        return;
+    }
+
+    int middle = (left + right) / 2;
+    merge_sort(array, left, middle);
+    merge_sort(array, middle + 1, right);
+    merge(array, left, middle, right);
+}
+
+// printing
+void print_records(Record *data, int recordings, int limit) {
+    if (limit > recordings) {
+        limit = recordings;
+    }
+    
+    for (int i=0; i<limit; i++) {
+        printf("[%3d] Date: %-12s | Cumulative: %lld\n");
+    }
 }
 
 int main() {
-    int x;
-    Record* data = (Record*)malloc(MAX_ROWS * sizeof(Record));
-    if(!data) {
-        printf("Memory allocation failed\n");
+    const char *filename = "effects-of-covid-19-on-trade-at-15-december-2021-provisional.csv";
+
+    //load data
+    Record *original = (Record*)malloc(MAX_ROWS*sizeof(Record));
+    Record *count_in = (Record*)malloc(MAX_ROWS*sizeof(Record));
+    Record *merge_data = (Record*)malloc(MAX_ROWS*sizeof(Record));
+    Record *count_out = (Record*)malloc(MAX_ROWS*sizeof(Record));
+    temp_buffer = (Record*)malloc(MAX_ROWS*sizeof(Record));
+
+    if (!original || !count_in || !count_out || !merge_data || !temp_buffer) {
+        printf("Memory Error\n");
         return 1;
     }
 
-    x=load_csv("effects-of-covid-19-on-trade-at-15-december-2021-provisional.csv", data);
-    counting_sort(data, x, data);
+    int n= load_csv(filename, original);
+    if (n<=0) {
+        free(original);
+        return 1;
+    }
+
+    printf("Loaded %d recordings from CSV.\n", n);
+
+    memcpy(count_in, original, n*sizeof(Record));
+    memcpy(merge_data, original, n*sizeof(Record));
+
+    // time counting sort
+    clock_t count_start = clock();
+    counting_sort(count_in, n, count_out);
+    clock_t count_end = clock();
+    double count_time = (double)(count_end - count_start) / CLOCKS_PER_SEC;
+
+    printf("Counting first 10 recordings.\n");
+    print_records(count_out, n, 10);
+    printf("Counting Sort Time: $.6f seconds\n\n", count_time);
+
+    // time merge sort
+    clock_t merge_start = clock();
+    merge_sort(merge_data, 0, n-1);
+    clock_t merge_end = clock();
+    double merge_time = (double)(merge_end - merge_start) / CLOCKS_PER_SEC;
+
+    printf("Merging first 10 recordings.\n");
+    print_records(merge_data, n, 10);
+    printf("Merging Sort Time: $.6f seconds\n\n", merge_time);
+
+
+    // Comparison
+    printf("Counting Sort: %.6f sec | O(n+k)\n", count_time);
+    printf("Merging Sort: %.6f sec | O(n*logn)\n", merge_time);
+    if (count_time < merge_time) {
+        printf("Fastest:  Counting Sort\n");
+    } else {
+        printf("Fastest:  Merginf Sort\n");
+    }
+
+
+    //Free memory
+    free(original);
+    free(count_in);    
+    free(count_out);
+    free(merge_data);
+    free(temp_buffer);
+
     return 0;
 }
