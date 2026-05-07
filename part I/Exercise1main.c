@@ -108,6 +108,7 @@ void counting_sort(Record *input, int recordings, Record *output) {
             max = input[i].cumulative;
         }
     }
+    printf("%lld min \n %lld max", min, max);
 
     long long range = max - min + 1;
 
@@ -116,12 +117,33 @@ void counting_sort(Record *input, int recordings, Record *output) {
         printf("WARNING: range is too wide (%lld).\n", range);
         printf("Counting sort not suited for the input");
         memcpy(output, input, recordings * sizeof(Record));
+        return;
     }
+
+    // count array
+    int *count = (int *)calloc((size_t)range, sizeof(int));
+    if (!count) {
+        printf("Memory problem\n");
+        return;
+    }
+
+    //counting
+    for(int i=0;i<recordings;i++) {
+        count[input[i].cumulative-min]++;
+    }
+
+    //summing
+    //for(long i=0;)
 }
 
 int main() {
     int x;
-    Record* data;
+    Record* data = (Record*)malloc(MAX_ROWS * sizeof(Record));
+    if(!data) {
+        printf("Memory allocation failed\n");
+        return 1;
+    }
+
     x=load_csv("effects-of-covid-19-on-trade-at-15-december-2021-provisional.csv", data);
     counting_sort(data, x, data);
     return 0;
