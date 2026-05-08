@@ -133,7 +133,7 @@ void counting_sort(Record *input, int recordings, Record *output, bool *works) {
     }
 
     // count array
-    int *count = (int *)calloc((size_t)range, sizeof(int));
+    int *count = calloc((size_t)range, sizeof(int));
     if (!count) {
         printf("Memory problem\n");
         return;
