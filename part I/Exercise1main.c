@@ -215,11 +215,11 @@ int main() {
     bool count_works = true;
 
     //load data
-    Record *original = (Record*)malloc(MAX_ROWS*sizeof(Record));
-    Record *count_in = (Record*)malloc(MAX_ROWS*sizeof(Record));
-    Record *merge_data = (Record*)malloc(MAX_ROWS*sizeof(Record));
-    Record *count_out = (Record*)malloc(MAX_ROWS*sizeof(Record));
-    temp_buffer = (Record*)malloc(MAX_ROWS*sizeof(Record));
+    Record *original = malloc(MAX_ROWS*sizeof(Record));
+    Record *count_in = malloc(MAX_ROWS*sizeof(Record));
+    Record *merge_data = malloc(MAX_ROWS*sizeof(Record));
+    Record *count_out = malloc(MAX_ROWS*sizeof(Record));
+    temp_buffer = malloc(MAX_ROWS*sizeof(Record));
 
     if (!original || !count_in || !count_out || !merge_data || !temp_buffer) {
         printf("Memory Error\n");
