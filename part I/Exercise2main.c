@@ -106,6 +106,9 @@ void heap_sort (Record *input, Record* output, int size) {
         return;
     }
 
+    int index = size - 1;
+
+
     long long max = input[0].value;
     long long min = input[0].value;
     for (int i=1; i<size; i++) {
@@ -116,8 +119,9 @@ void heap_sort (Record *input, Record* output, int size) {
             min = input[i].value;
         }
     }
-    printf("Minimum Value: %lld \n Maximum Value: %lld \n", min, max);
 
 
-
+    for(int i=1; i<size; i++) {
+        if (input[i].value = max);
+    }
 }
