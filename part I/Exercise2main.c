@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <time.h>
 
@@ -101,27 +102,79 @@ int load_csv(const char *filename, Record *data) {
 
 // Heap Sort
 
-void heap_sort (Record *input, Record* output, int size) {
+void switch_Records(Record* x, int x_i, Record* y, int y_i) {
+    Record temp;
+
+    memcpy(&temp, &x[x_i], sizeof(Record));
+    memcpy(&x[x_i], &y[y_i], sizeof(Record));
+    memcpy(&y[y_i], &temp, sizeof(Record));
+}
+
+
+void heapify(Record *data, int size, int index) {
+    int largest = index;
+    
+    int li = 2*index + 1;
+    int ri = 2*index + 2;
+
+    if (li < size && data[li].value > data[largest].value) {
+        largest = li;
+    }
+
+    if (ri < size && data[ri].value > data[largest].value) {
+        largest = ri;
+    }
+
+    if (largest != index) {
+        switch_Records(data, largest, data, index);
+        heapify(data, size, largest);
+    }
+
+}
+
+void heap_sort (Record *input, int size) {
     if (size <= 0) {
         return;
     }
+    bool sorted = false;
+    int n = size-1;
+    int half = size / 2 - 1;
 
-    int index = size - 1;
+    for(int i= half; i >= 0; i--) {
+        heapify(input, size, i);
+    }
 
+    for(int i = size-1; i>0; i--) {
+        switch_Records(input, 0, input, i);
+        heapify(input, i, 0);
+    }
+}
 
-    long long max = input[0].value;
-    long long min = input[0].value;
-    for (int i=1; i<size; i++) {
-        if (input[i].value > max) {
-            max = input[i].value;
-        }
-        if (input[i].value < min) {
-            min = input[i].value;
-        }
+int main() {
+    const char *filename = "effects-of-covid-19-on-trade-at-15-december-2021-provisional.csv";
+
+    Record *original = malloc(MAX_ROWS*sizeof(Record));
+    Record *temp = malloc(MAX_ROWS*sizeof(Record));
+    if (!original || !temp) {
+        printf("Memory Error.\n");
+        return 1;
+    }
+
+    int recordings= load_csv(filename, original);
+    if (recordings<=0) {
+        free(original);
+        return 1;
+    }
+
+    printf("Loaded %d recordings from CSV.\n", recordings);
+
+    memcpy(temp, original, recordings*sizeof(Record));
+    heap_sort(temp, recordings);
+
+    for (int i = recordings -10; i <= recordings; i++) {
+        printf("i %lld, o %lld\n", original[i].value, temp[i].value);
     }
 
 
-    for(int i=1; i<size; i++) {
-        if (input[i].value = max);
-    }
+    return 0;
 }
