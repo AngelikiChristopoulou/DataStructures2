@@ -99,17 +99,29 @@ int load_csv(const char *filename, Record *data) {
     return count;
 }
 
+// helpig functions
 
-// Heap Sort
-
-void switch_Records(Record* x, int x_i, Record* y, int y_i) {
+void swap_Records(Record* data, int i, int j) {
     Record temp;
 
-    memcpy(&temp, &x[x_i], sizeof(Record));
-    memcpy(&x[x_i], &y[y_i], sizeof(Record));
-    memcpy(&y[y_i], &temp, sizeof(Record));
+    memcpy(&temp, &data[i], sizeof(Record));
+    memcpy(&data[i], &data[j], sizeof(Record));
+    memcpy(&data[j], &temp, sizeof(Record));
 }
 
+// printing
+void print_records(Record *data, int recordings, int limit) {
+    if (limit > recordings) {
+        limit = recordings;
+    }
+    
+    for (int i=0; i<limit; i++) {
+        printf("[%3d] Date: %-12s | Cumulative: %lld\n", i+1, data[i].date, data[i].cumulative);
+    }
+}
+
+
+// Heap Sort
 
 void heapify(Record *data, int size, int index) {
     int largest = index;
@@ -126,13 +138,13 @@ void heapify(Record *data, int size, int index) {
     }
 
     if (largest != index) {
-        switch_Records(data, largest, data, index);
+        swap_Records(data, largest, index);
         heapify(data, size, largest);
     }
 
 }
 
-void heap_sort (Record *input, int size) {
+void heapSort (Record *input, int size) {
     if (size <= 0) {
         return;
     }
@@ -145,36 +157,106 @@ void heap_sort (Record *input, int size) {
     }
 
     for(int i = size-1; i>0; i--) {
-        switch_Records(input, 0, input, i);
+        swap_Records(input, 0, i);
         heapify(input, i, 0);
     }
 }
 
+// Quick Sort
+
+int parition(Record* data, int low, int high){
+    long long piv = data[low].value; // Pivot = first element
+    int i = low;
+    int j = high;
+
+    while(i < j) {
+        while(data[i].value <= piv && i <= high - 1) {
+            i++;
+        }
+
+        while(data[j].value > piv && j >= low + 1) {
+            j--;
+        }
+
+        if(i < j) {
+            swap_Records(data, i, j);
+        }
+    }
+
+    swap_Records(data, low, j);
+    return j;
+}
+
+void quickSort(Record* data, int low, int high) {
+    if(low < high) {
+
+        int pi = parition(data, low, high);
+
+        quickSort(data, low, pi-1);
+        quickSort(data, pi + 1, high);
+    }
+}
+
+
 int main() {
     const char *filename = "effects-of-covid-19-on-trade-at-15-december-2021-provisional.csv";
 
+    //load data
     Record *original = malloc(MAX_ROWS*sizeof(Record));
-    Record *temp = malloc(MAX_ROWS*sizeof(Record));
-    if (!original || !temp) {
-        printf("Memory Error.\n");
+    Record *heap_sort = malloc(MAX_ROWS*sizeof(Record));
+    Record *quick_sort = malloc(MAX_ROWS*sizeof(Record));
+
+    if (!original || !heap_sort || !quick_sort) {
+        printf("Memory Error\n");
         return 1;
     }
 
-    int recordings= load_csv(filename, original);
-    if (recordings<=0) {
+    int n= load_csv(filename, original);
+    if (n<=0) {
         free(original);
         return 1;
     }
 
-    printf("Loaded %d recordings from CSV.\n", recordings);
+    printf("Loaded %d recordings from CSV.\n", n);
 
-    memcpy(temp, original, recordings*sizeof(Record));
-    heap_sort(temp, recordings);
+    memcpy(heap_sort, original, n*sizeof(Record));
+    memcpy(quick_sort, original, n*sizeof(Record));
 
-    for (int i = recordings -10; i <= recordings; i++) {
-        printf("i %lld, o %lld\n", original[i].value, temp[i].value);
+    // time heap sort
+    clock_t heap_start = clock();
+    heapSort(heap_sort, n);
+    clock_t heap_end = clock();
+    double heap_time = (double)(heap_end - heap_start) / CLOCKS_PER_SEC;
+    
+    printf("Heap sort first 10 recordings.\n");
+    print_records(quick_sort, n, 10);
+    printf("Heap Sort Time: %.6f seconds\n\n", heap_time);
+
+    // time quick sort
+    clock_t quick_start = clock();
+    quickSort(quick_sort, 0, n);
+    clock_t quick_end = clock();
+    double quick_time = (double)(quick_end - quick_start) / CLOCKS_PER_SEC;
+    
+    printf("Quick sort first 10 recordings.\n");
+    print_records(quick_sort, n, 10);
+    printf("Quick Sort Time: %.6f seconds\n\n", quick_time);
+
+
+    // Comparison
+    printf("Heap Sort: %.6f sec | O(n*logn)\n", heap_time);
+    printf("Quick Sort: %.6f sec | O(n*logn)\n", quick_time);
+    if (heap_time < quick_time) {
+        printf("Fastest:  Heap Sort\n");
+    } else {
+        printf("Fastest:  Quick Sort\n");
     }
 
+
+    //Free memory
+    free(original);
+    free(heap_sort);    
+    free(quick_sort);
 
     return 0;
 }
