@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <string.h>
 #include <time.h>
 
@@ -148,7 +147,6 @@ void heapSort (Record *input, int size) {
     if (size <= 0) {
         return;
     }
-    bool sorted = false;
     int n = size-1;
     int half = size / 2 - 1;
 
