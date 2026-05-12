@@ -229,12 +229,12 @@ int main() {
     double heap_time = (double)(heap_end - heap_start) / CLOCKS_PER_SEC;
     
     printf("Heap sort first 10 recordings.\n");
-    print_records(quick_sort, n, 10);
+    print_records(heap_sort, n, 10);
     printf("Heap Sort Time: %.6f seconds\n\n", heap_time);
 
     // time quick sort
     clock_t quick_start = clock();
-    quickSort(quick_sort, 0, n);
+    quickSort(quick_sort, 0, n-1);
     clock_t quick_end = clock();
     double quick_time = (double)(quick_end - quick_start) / CLOCKS_PER_SEC;
     
