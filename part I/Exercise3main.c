@@ -105,33 +105,35 @@ int load_csv(const char *filename, Record *data) {
 // helpig functions
 
 void swap_Records(Record* data, int i, int j) {
-    Record temp;
-
-    memcpy(&temp, &data[i], sizeof(Record));
-    memcpy(&data[i], &data[j], sizeof(Record));
-    memcpy(&data[j], &temp, sizeof(Record));
+    Record temp = data[i];
+    data[i] = data[j];
+    data[j]=temp;
 }
 
 
 // Heap Sort
 
 void heapify(Record *data, int size, int index) {
-    int largest = index;
     
-    int li = 2*index + 1;
-    int ri = 2*index + 2;
+    while(1) {
+        int largest = index;
+        int li = 2*index + 1;
+        int ri = 2*index + 2;
 
-    if (li < size && data[li].value > data[largest].value) {
-        largest = li;
-    }
+        if (li < size && data[li].value > data[largest].value) {
+            largest = li;
+        }
 
-    if (ri < size && data[ri].value > data[largest].value) {
-        largest = ri;
-    }
+        if (ri < size && data[ri].value > data[largest].value) {
+            largest = ri;
+        }
 
-    if (largest != index) {
+        if(largest == index) {
+            break;
+        }
+
         swap_Records(data, largest, index);
-        heapify(data, size, largest);
+        index = largest;
     }
 
 }
@@ -205,36 +207,37 @@ int interpolationSearch(Record* input, int low, int high, long long x) {
 
 int main() {
     const char *filename = "effects-of-covid-19-on-trade-at-15-december-2021-provisional.csv";
-
+printf("1");
     //load data
     Record *original = malloc(MAX_ROWS*sizeof(Record));
     Record *binary_search = malloc(MAX_ROWS*sizeof(Record));
     Record *interpolation_search = malloc(MAX_ROWS*sizeof(Record));
     Record *sorted = malloc(MAX_ROWS*sizeof(Record));
     
-
+printf("1");
     if (!original || !binary_search || !interpolation_search || !sorted) {
         printf("Memory Error\n");
         return 1;
     }
-
+printf("1");
     int n= load_csv(filename, original);
     if (n<=0) {
         free(original);
         return 1;
     }
-
+printf("1");
     printf("Loaded %d recordings from CSV.\n", n);
-
+printf("1");
     memcpy(sorted, original, n*sizeof(Record));
-
-    // sort by value
-    heapSort(sorted, n);
+printf("1");
     long long search;
     printf("Value: ");
     scanf("%lld", &search);
     printf("\n\n");
-
+printf("1");
+    // sort by value
+    heapSort(sorted, n);
+printf("1");
     memcpy(binary_search, sorted, n*sizeof(Record));
     memcpy(interpolation_search, sorted, n*sizeof(Record));
 
