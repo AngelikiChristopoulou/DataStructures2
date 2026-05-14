@@ -1,8 +1,13 @@
+/*Ταξινόμηση κατά αύξουσα σειρά των ημερομηνιών (Πεδίο Date) βάσει των τιμών του Πεδίου
+Cumulative κάνοντας χρήση των αλγορίθμων Counting Sort και merge Sort, σύμφωνα με
+τον ψευδοκώδικα που σας επεξηγήθηκε στη θεωρία (για λεπτομέρειες δείτε τις σχετικές
+διαφάνειες στο e-class). Συγκρίνατε πειραματικά τους δύο (2) αλγορίθμους. Τι παρατηρείτε?
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-#include <time.h> // used to count the time each algorithm takes
+#include <time.h> 
 
 #define DIRECTION 8
 #define YEAR 5
@@ -11,7 +16,11 @@
 #define MAX_STR 64
 #define MAX_ROWS 111440
 
-// Δομ΄η Εγγραφ΄ης 
+
+//============================================ 
+// Δομή Εγγραφής
+//============================================ 
+
 typedef struct {
     char direction[DIRECTION];
     char year[YEAR];
@@ -28,14 +37,19 @@ typedef struct {
 static Record* temp_buffer = NULL;
 
 
-// calling functions
+/* Πρότηπα συναρτήσεως */
+
+
 int load_csv(const char *filename, Record *data);
 void counting_sort(Record *input, int recordings, Record *output, bool *works);
 void merge(Record* array, int left, int current, int right);
 void merge_sort(Record* array, int left, int right);
 void print_records(Record *data, int recordings, int limit);
 
-// Φόρτωση στοιχείων
+
+//============================================ 
+
+
 int load_csv(const char *filename, Record *data) {
     FILE *fptr = fopen(filename, "r");
     if(!fptr) {
@@ -103,7 +117,6 @@ int load_csv(const char *filename, Record *data) {
 }
 
 
-// Counting Sort βασή cumulative
 void counting_sort(Record *input, int recordings, Record *output, bool *works) {
     if (recordings <= 0) return;
     
@@ -160,7 +173,6 @@ void counting_sort(Record *input, int recordings, Record *output, bool *works) {
 }
 
 
-// Merge sort
 void merge(Record* array, int left, int middle, int right){
     int l = left;
     int r = middle+1;
@@ -187,6 +199,7 @@ void merge(Record* array, int left, int middle, int right){
     }
 }
 
+
 void merge_sort(Record* array, int left, int right) {
     if (left >= right) {
         return;
@@ -198,7 +211,7 @@ void merge_sort(Record* array, int left, int right) {
     merge(array, left, middle, right);
 }
 
-// printing
+
 void print_records(Record *data, int recordings, int limit) {
     if (limit > recordings) {
         limit = recordings;
@@ -208,6 +221,10 @@ void print_records(Record *data, int recordings, int limit) {
         printf("[%3d] Date: %-12s | Cumulative: %lld\n", i+1, data[i].date, data[i].cumulative);
     }
 }
+
+
+//============================================ 
+
 
 int main() {
     const char *filename = "effects-of-covid-19-on-trade-at-15-december-2021-provisional.csv";
