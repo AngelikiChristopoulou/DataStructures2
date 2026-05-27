@@ -187,21 +187,22 @@ int bis(Record* input, int low, int high, long long key) {
             int up = (int)sqrt(size);
             while (next + i * up <= right && key > input[next + i * up].value) {
                 i++;
-                right = (next + i * up <= right) ? next + i * up : right;
-                left = next + (i-1)*up + 1;
             }
+            right = (next + i * up <= right) ? next + i * up : right;
+            left = next + (i-1)*up + 1;
         } 
         else {
             int i = 1;
             int up = (int)sqrt(size);
-            while (next - 1 * up >= left && key < input[next - i*up].value){
+            while (next - i * up >= left && key < input[next - i*up].value){
                 i++;
-                right = next - (i-1)*up;
-                left = (next - i*up >= left) ? next - i*up : left;
             }
+            right = next - (i-1)*up - 1;
+            left = (next - i * up >= left) ? next - i * up : left;
         }
-        next = left + size * ((key - input[left].value)/(input[right].value - input[left].value));
+        next = left + (int)((double)(key - input[left].value)/(input[right].value - input[left].value)*(right-left));
     }
+    
 
     return -1;
 }
@@ -232,20 +233,20 @@ int bis_improved(Record* input, int low, int high, long long key) {
             int up = (int)sqrt(size);
             while (next + i * up <= right && key > input[next + i * up].value) {
                 i*=2;
-                right = (next + i * up <= right) ? next + i * up : right;
-                left = next + (i-1)*up + 1;
             }
+            right = (next + i * up <= right) ? next + i * up : right;
+            left = next + (i/2)*up + 1;
         } 
         else {
             int i = 1;
             int up = (int)sqrt(size);
-            while (next - 1 * up >= left && key < input[next - i*up].value){
+            while (next - i * up >= left && key < input[next - i*up].value){
                 i*=2;
-                right = next - (i-1)*up;
-                left = (next - i*up >= left) ? next - i*up : left;
             }
+            right = next - (i/2)*up;
+            left = (next - i*up >= left) ? next - i*up : left;
         }
-        next = left + size * ((key - input[left].value)/(input[right].value - input[left].value));
+        next = left + (int)((double)(key - input[left].value)/(input[right].value - input[left].value)*(right-left));
     }
 
     return -1;
@@ -257,13 +258,11 @@ int main() {
     const char *filename = "effects-of-covid-19-on-trade-at-15-december-2021-provisional.csv";
     
     //load data
-    Record *original = malloc(MAX_ROWS*sizeof(Record));
-    Record *bis_original = malloc(MAX_ROWS*sizeof(Record));
-    Record *bis_imp_original = malloc(MAX_ROWS*sizeof(Record)); 
+    Record *original = malloc(MAX_ROWS*sizeof(Record)); 
     Record *sorted = malloc(MAX_ROWS*sizeof(Record));
     
     
-    if (!original  || !bis_original || !bis_imp_original || !sorted) {
+    if (!original || !sorted) {
         printf("Memory Error\n");
         return 1;
     }
@@ -286,23 +285,30 @@ int main() {
     // sort by value
     heapSort(sorted, n);
 
-    memcpy(bis_original,sorted,n*sizeof(Record));
-    memcpy(bis_imp_original,sorted,n*sizeof(Record));
-
     //BIS
     clock_t bis_start = clock();
-    int bis_res = bis(bis_original, 0, n, search);
+    int bis_res = bis(sorted, 0, n-1, search);
     clock_t bis_end = clock();
     double bis_time = (double)(bis_end - bis_start) / CLOCKS_PER_SEC;
 
+    if(bis_res >= 0) {
+        printf("BIS found the value at index %d\n",bis_res);
+    } else {
+        printf("BIS: value not found\n");
+    }
     printf("BIS Time: %.6f seconds\n\n", bis_time);
     
     //BIS*
     clock_t bis_imp_start = clock();
-    int bis_imp_res = bis(bis_imp_original, 0, n, search);
+    int bis_imp_res = bis_improved(sorted, 0, n-1, search);
     clock_t bis_imp_end = clock();
     double bis_imp_time = (double)(bis_imp_end - bis_imp_start) / CLOCKS_PER_SEC;
 
+    if(bis_imp_res >= 0) {
+        printf("BIS* found the value at index %d\n",bis_res);
+    } else {
+        printf("BIS*: value not found\n");
+    }
     printf("BIS* Time: %.6f seconds\n\n", bis_imp_time);
 
     
@@ -318,9 +324,11 @@ int main() {
 
     //Free memory
     free(original); 
-    free(bis_original);  
-    free(bis_imp_original);
     free(sorted);
+
+    printf("\nPress Enter to exit the program.\n");
+    getchar();
+    getchar();
 
     return 0;
 }
