@@ -291,6 +291,9 @@ int main() {
         printf("Fastest:  Merging Sort\n");
     }
 
+    
+    printf("\nPress Enter to exit the program.\n");
+    getchar();
 
     //Free memory
     free(original);

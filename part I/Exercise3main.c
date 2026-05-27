@@ -275,5 +275,9 @@ int main() {
     free(interpolation_search);
     free(sorted);
 
+    
+    printf("\nPress Enter to exit the program.\n");
+    getchar();
+
     return 0;
 }

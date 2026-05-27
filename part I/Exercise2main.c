@@ -250,6 +250,9 @@ int main() {
         printf("Fastest:  Quick Sort\n");
     }
 
+    
+    printf("\nPress Enter to exit the program.\n");
+    getchar();
 
     //Free memory
     free(original);
