@@ -13,6 +13,10 @@
 * 5. Έξοδος από την εφαρμογή.  
 */
 
+// oooooooooooooooooooooooo
+//       Useage: AVL
+// oooooooooooooooooooooooo
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -48,6 +52,7 @@ typedef struct {
     Record* record;
     struct Node* left;
     struct Node* right;
+    int height;
 } Node;
 
 
@@ -74,28 +79,24 @@ Node* insert(Node* node, Record* value) {
         return createNode(value);
     }
 
-    //check year
-    if(value->date[2] < node->record->date[2]) {
+    int cmp = compareDates(node->record->date, value->date);
+    if (cmp<0) {
         node->left = insert(node->left, value);
-    } else if (value->date[2] > node->record->date[2]){
+    } else if (cmp>0) {
         node->right = insert(node->right, value);
     } else {
-        //check month
-        if(value->date[1] < node->record->date[1]) {
-            node->left = insert(node->left, value);
-        } else if (value->date[1] > node->record->date[1]){
-            node->right = insert(node->right, value);
-        } else {
-            // check date
-            if(value->date[0] < node->record->date[0]) {
-                node->left = insert(node->left, value);
-            } else if (value->date[0] > node->record->date[0]){
-                node->right = insert(node->right, value);
-            }
-        }
+        return node;
     }
 
     return node;
+}
+
+int height(Node* node) {
+    return node ? node->height : 0;
+}
+
+int balanceFactor(Node* node) {
+    return node ? height(node->left) - height(node->right) : 0;
 }
 
 
@@ -112,6 +113,11 @@ void swapNodes(Node* to, Node* from) {
     memcpy(&from, &temp, sizeof(Node));
 }
 
+int compareDates(int* x, int* y) {
+    if(x[2] != y[2]) return x[2] - y[2];
+    if(x[1] != y[1]) return x[1] - y[1];
+    return x[0] - y[0];
+}
 
 // ==============================================
 // Helping functions
