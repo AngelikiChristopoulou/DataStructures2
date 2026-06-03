@@ -55,6 +55,10 @@ typedef struct Node {
     int height;
 } Node;
 
+typedef struct EqNode {
+    Node* current;
+    Node* next;
+} EqNode;
 
 
 // ==============================================
@@ -62,7 +66,7 @@ typedef struct Node {
 // ==============================================
 
 
-struct Node* createNode(Record* value);
+Node* createNode(Record* value);
 Node* insert(Node* node, Record* value);
 int height(Node* node);
 int balanceFactor(Node* node);
@@ -162,7 +166,7 @@ int load_csv(const char *filename, Record *data) {
 // ==============================================
 
 
-struct Node* createNode(Record* value) {
+Node* createNode(Record* value) {
     Node* newNode = malloc(sizeof(Node));
     if (newNode == NULL) {
         fprintf(stderr, "Memory allocation failed\n");
@@ -173,6 +177,12 @@ struct Node* createNode(Record* value) {
     newNode->right = NULL;
     newNode->height = 1;
     return newNode;
+}
+
+EqNode* createEqNode(Node* previous, Node* this) {
+    EqNode* new = malloc(sizeof(EqNode));
+
+    
 }
 
 Node* insert(Node* node, Record* value) {
