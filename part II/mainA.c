@@ -55,11 +55,6 @@ typedef struct Node {
     int height;
 } Node;
 
-typedef struct EqNode {
-    Node* current;
-    Node* next;
-} EqNode;
-
 
 // ==============================================
 // Function Callings
@@ -179,11 +174,6 @@ Node* createNode(Record* value) {
     return newNode;
 }
 
-EqNode* createEqNode(Node* previous, Node* this) {
-    EqNode* new = malloc(sizeof(EqNode));
-
-    
-}
 
 Node* insert(Node* node, Record* value) {
     // Βρήκαμε την κατάλληλη κενή θέση → δημιουργούμε και τοποθετούμε νέο κόμβο 
