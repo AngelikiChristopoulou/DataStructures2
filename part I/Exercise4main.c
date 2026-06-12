@@ -4,16 +4,15 @@
 #include <time.h>
 #include <math.h>
 
-
+#define MAX_ROWS 111440
 #define DIRECTION 8
 #define YEAR 5
 #define DATE 11
 #define WEEKDAY 10
 #define MAX_STR 64
-#define MAX_ROWS 111440
+#define TRIALS 50000
 
-
-// Δομ΄η Εγγραφ΄ης 
+// ===================== STRUCT =====================
 typedef struct {
     char direction[DIRECTION];
     char year[YEAR];
@@ -27,308 +26,244 @@ typedef struct {
     long long cumulative;
 } Record;
 
-//===========================================
-// search by Value
-//===========================================
+// ===================== DATE CONVERSION =====================
+long long dateToInt(const char *date) {
+    int d, m, y;
+    sscanf(date, "%d/%d/%d", &d, &m, &y);
+    return (long long)y * 10000 + m * 100 + d;
+}
 
-// calling functions
-int load_csv(const char *filename, Record *data);
-
-
-// Φόρτωση στοιχείων
+// ===================== LOAD CSV =====================
 int load_csv(const char *filename, Record *data) {
-    FILE *fptr = fopen(filename, "r");
-    if(!fptr) {
-        printf("[ERROR] No file %s found.\n", filename);
-        return -1;
-    }
+    FILE *f = fopen(filename, "r");
+    if (!f) return -1;
 
-    char line[512]; //temp info saver
-    int count = 0;
+    char line[512];
+    int n = 0;
 
-    fgets(line, sizeof(line), fptr);
+    fgets(line, sizeof(line), f); // skip header
 
-    while (fgets(line, sizeof(line), fptr) && count < MAX_ROWS) {
-        line[strcspn(line, "\r\n")] = 0;
-
-        char *temp;
+    while (fgets(line, sizeof(line), f) && n < MAX_ROWS) {
         Record r;
         memset(&r, 0, sizeof(r));
 
-        temp = strtok(line, ",");
-        if(!temp) continue;
-        strncpy(r.direction, temp, DIRECTION-1);
+        char *t = strtok(line, ","); strcpy(r.direction, t);
+        t = strtok(NULL, ","); strcpy(r.year, t);
+        t = strtok(NULL, ","); strcpy(r.date, t);
+        t = strtok(NULL, ","); strcpy(r.weekday, t);
+        t = strtok(NULL, ","); strcpy(r.country, t);
+        t = strtok(NULL, ","); strcpy(r.commodity, t);
+        t = strtok(NULL, ","); strcpy(r.transport_mode, t);
+        t = strtok(NULL, ","); strcpy(r.measure, t);
+        t = strtok(NULL, ","); r.value = atoll(t);
+        t = strtok(NULL, ","); r.cumulative = atoll(t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.year, temp, YEAR-1);
-
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.date, temp, DATE-1);
-
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.weekday, temp, sizeof(r.weekday) - 1);
-
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.country, temp, sizeof(r.country) - 1);
-
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.commodity, temp, sizeof(r.commodity) - 1);
-
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.transport_mode, temp, sizeof(r.transport_mode) - 1);
-
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.measure, temp, sizeof(r.measure) - 1);
-
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        r.value = atoll(temp);
-
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        r.cumulative = atoll(temp);
-
-        data[count++] = r;
+        data[n++] = r;
     }
 
-    fclose(fptr);
-    return count;
+    fclose(f);
+    return n;
 }
 
-
-// helpig functions
-
-void swap_Records(Record* data, int i, int j) {
-    Record temp;
-
-    memcpy(&temp, &data[i], sizeof(Record));
-    memcpy(&data[i], &data[j], sizeof(Record));
-    memcpy(&data[j], &temp, sizeof(Record));
+// ===================== SWAP =====================
+void swap(Record *a, Record *b) {
+    Record tmp = *a;
+    *a = *b;
+    *b = tmp;
 }
 
+// ===================== HEAP SORT BY DATE =====================
+void heapify(Record *a, int n, int i) {
+    while (1) {
+        int largest = i;
+        int l = 2*i + 1;
+        int r = 2*i + 2;
 
-// Heap Sort
+        if (l < n && dateToInt(a[l].date) > dateToInt(a[largest].date))
+            largest = l;
 
-void heapify(Record *data, int size, int index) {
-    
-    while(1) {
-        int largest = index;
-        int li = 2*index + 1;
-        int ri = 2*index + 2;
+        if (r < n && dateToInt(a[r].date) > dateToInt(a[largest].date))
+            largest = r;
 
-        if (li < size && data[li].value > data[largest].value) {
-            largest = li;
-        }
+        if (largest == i) break;
 
-        if (ri < size && data[ri].value > data[largest].value) {
-            largest = ri;
-        }
-
-        if(largest == index) {
-            break;
-        }
-
-        swap_Records(data, largest, index);
-        index = largest;
-    }
-
-}
-
-void heapSort (Record *input, int size) {
-    if (size <= 0) {
-        return;
-    }
-    int n = size-1;
-    int half = size / 2 - 1;
-
-    for(int i= half; i >= 0; i--) {
-        heapify(input, size, i);
-    }
-
-    for(int i = size-1; i>0; i--) {
-        swap_Records(input, 0, i);
-        heapify(input, i, 0);
+        swap(&a[i], &a[largest]);
+        i = largest;
     }
 }
 
-//===========================================
-// search by Value
-//===========================================
+void heapSort(Record *a, int n) {
+    for (int i = n/2 - 1; i >= 0; i--)
+        heapify(a, n, i);
 
-int bis(Record* input, int low, int high, long long key) {
-    int right = high;
-    int left = low;
+    for (int i = n - 1; i > 0; i--) {
+        swap(&a[0], &a[i]);
+        heapify(a, i, 0);
+    }
+}
 
-    while (left <= right && key >= input[left].value && key <= input[right].value) {
-        if (left == right) {
-            return (input[left].value == key) ? left : -1;
-        }
-        double size = right - left + 1;
+// ===================== BIS =====================
+int bis(Record *a, int low, int high, long long key) {
+    while (low <= high) {
 
-        int next = left + (int)((double)(key-input[left].value) / (input[right].value-input[left].value) * (right - left));
+        long long leftKey = dateToInt(a[low].date);
+        long long rightKey = dateToInt(a[high].date);
 
-        if (next < left || next > right) {
+        if (key < leftKey || key > rightKey)
             return -1;
-        }
 
-        if (key == input[next].value) {
+        if (low == high)
+            return (leftKey == key) ? low : -1;
+
+        int next = low + (int)(
+            ((double)(key - leftKey) /
+            (rightKey - leftKey)) * (high - low)
+        );
+
+        long long nextKey = dateToInt(a[next].date);
+
+        if (nextKey == key)
             return next;
-        } 
 
-        if (key > input[next].value) {
-            int i = 1;
-            int up = (int)sqrt(size);
-            while (next + i * up <= right && key > input[next + i * up].value) {
-                i++;
-            }
-            right = (next + i * up <= right) ? next + i * up : right;
-            left = next + (i-1)*up + 1;
-        } 
-        else {
-            int i = 1;
-            int up = (int)sqrt(size);
-            while (next - i * up >= left && key < input[next - i*up].value){
-                i++;
-            }
-            right = next - (i-1)*up - 1;
-            left = (next - i * up >= left) ? next - i * up : left;
+        int step = (int)sqrt(high - low + 1);
+
+        if (key > nextKey) {
+            while (next + step <= high &&
+                   dateToInt(a[next + step].date) < key)
+                next += step;
+
+            low = next + 1;
+        } else {
+            while (next - step >= low &&
+                   dateToInt(a[next - step].date) > key)
+                next -= step;
+
+            high = next - 1;
         }
-        next = left + (int)((double)(key - input[left].value)/(input[right].value - input[left].value)*(right-left));
     }
-    
-
     return -1;
 }
 
-// BIS*
-int bis_improved(Record* input, int low, int high, long long key) {
-    int right = high;
-    int left = low;
+// ===================== BIS* =====================
+int bis_star(Record *a, int low, int high, long long key) {
+    while (low <= high) {
 
-    while (left <= right && key >= input[left].value && key <= input[right].value) {
-        if (left == right) {
-            return (input[left].value == key) ? left : -1;
-        }
-        double size = right - left + 1;
+        long long leftKey = dateToInt(a[low].date);
+        long long rightKey = dateToInt(a[high].date);
 
-        int next = left + (int)((double)(key-input[left].value) / (input[right].value-input[left].value) * (right - left));
-
-        if (next < left || next > right) {
+        if (key < leftKey || key > rightKey)
             return -1;
-        }
 
-        if (key == input[next].value) {
+        if (low == high)
+            return (leftKey == key) ? low : -1;
+
+        int next = low + (int)(
+            ((double)(key - leftKey) /
+            (rightKey - leftKey)) * (high - low)
+        );
+
+        long long nextKey = dateToInt(a[next].date);
+
+        if (nextKey == key)
             return next;
-        } 
 
-        if (key > input[next].value) {
-            int i = 1;
-            int up = (int)sqrt(size);
-            while (next + i * up <= right && key > input[next + i * up].value) {
-                i*=2;
-            }
-            right = (next + i * up <= right) ? next + i * up : right;
-            left = next + (i/2)*up + 1;
-        } 
-        else {
-            int i = 1;
-            int up = (int)sqrt(size);
-            while (next - i * up >= left && key < input[next - i*up].value){
-                i*=2;
-            }
-            right = next - (i/2)*up;
-            left = (next - i*up >= left) ? next - i*up : left;
+        int step = (int)sqrt(high - low + 1);
+
+        int jump = 1;
+
+        if (key > nextKey) {
+            while (next + jump * step <= high &&
+                   dateToInt(a[next + jump * step].date) < key)
+                jump *= 2;
+
+            low = next + (jump/2)*step + 1;
+        } else {
+            while (next - jump * step >= low &&
+                   dateToInt(a[next - jump * step].date) > key)
+                jump *= 2;
+
+            high = next - (jump/2)*step - 1;
         }
-        next = left + (int)((double)(key - input[left].value)/(input[right].value - input[left].value)*(right-left));
     }
-
     return -1;
 }
 
-
-
+// ===================== MAIN =====================
 int main() {
-    const char *filename = "effects-of-covid-19-on-trade-at-15-december-2021-provisional.csv";
-    
-    //load data
-    Record *original = malloc(MAX_ROWS*sizeof(Record)); 
-    Record *sorted = malloc(MAX_ROWS*sizeof(Record));
-    
-    
-    if (!original || !sorted) {
-        printf("Memory Error\n");
+
+    const char *file =
+        "effects-of-covid-19-on-trade-at-15-december-2021-provisional.csv";
+
+    Record *data = malloc(MAX_ROWS * sizeof(Record));
+    Record *sorted = malloc(MAX_ROWS * sizeof(Record));
+
+    int n = load_csv(file, data);
+    if (n <= 0) {
+        printf("Error loading file\n");
         return 1;
     }
-    
-    int n= load_csv(filename, original);
-    if (n<=0) {
-        free(original);
-        return 1;
-    }
-    
-    printf("Loaded %d recordings from CSV.\n", n);
-    
-    memcpy(sorted, original, n*sizeof(Record));
-    
-    long long search;
-    printf("Value: ");
-    scanf("%lld", &search);
-    printf("\n\n");
-    
-    // sort by value
+
+    printf("Loaded %d records.\n", n);
+
+    memcpy(sorted, data, n * sizeof(Record));
     heapSort(sorted, n);
 
-    //BIS
-    clock_t bis_start = clock();
-    int bis_res = bis(sorted, 0, n-1, search);
-    clock_t bis_end = clock();
-    double bis_time = (double)(bis_end - bis_start) / CLOCKS_PER_SEC;
+    char input[16];
+    printf("Enter Date (dd/mm/yyyy): ");
+    scanf("%s", input);
 
-    if(bis_res >= 0) {
-        printf("BIS found the value at index %d\n",bis_res);
-    } else {
-        printf("BIS: value not found\n");
-    }
-    printf("BIS Time: %.6f seconds\n\n", bis_time);
-    
-    //BIS*
-    clock_t bis_imp_start = clock();
-    int bis_imp_res = bis_improved(sorted, 0, n-1, search);
-    clock_t bis_imp_end = clock();
-    double bis_imp_time = (double)(bis_imp_end - bis_imp_start) / CLOCKS_PER_SEC;
+    long long key = dateToInt(input);
 
-    if(bis_imp_res >= 0) {
-        printf("BIS* found the value at index %d\n",bis_res);
-    } else {
-        printf("BIS*: value not found\n");
-    }
-    printf("BIS* Time: %.6f seconds\n\n", bis_imp_time);
+    // ===================== REAL SEARCH =====================
+    int r1 = bis(sorted, 0, n-1, key);
+    int r2 = bis_star(sorted, 0, n-1, key);
 
-    
-    // Comparison
-    printf("BIS : %.6f sec | O(log(logn))\n", bis_time);
-    printf("BIS* : %.6f sec | O(log(logn))\n", bis_imp_time);
-    if (bis_time < bis_imp_time) {
-        printf("Fastest:  BIS\n");
+    if (r1 != -1) {
+        printf("\nBIS FOUND:\n");
+        printf("Date: %s\n", sorted[r1].date);
+        printf("Value: %lld\n", sorted[r1].value);
+        printf("Cumulative: %lld\n", sorted[r1].cumulative);
     } else {
-        printf("Fastest:  BIS*\n");
+        printf("\nBIS NOT FOUND\n");
     }
 
+    if (r2 != -1) {
+        printf("\nBIS* FOUND:\n");
+        printf("Date: %s\n", sorted[r2].date);
+        printf("Value: %lld\n", sorted[r2].value);
+        printf("Cumulative: %lld\n", sorted[r2].cumulative);
+    } else {
+        printf("\nBIS* NOT FOUND\n");
+    }
 
-    //Free memory
-    free(original); 
+    // ===================== TIMING =====================
+    volatile int sink = 0;
+
+    clock_t start = clock();
+    for (int i = 0; i < TRIALS; i++)
+        sink += bis(sorted, 0, n-1, key);
+    clock_t end = clock();
+
+    double t1 = (double)(end - start) / CLOCKS_PER_SEC / TRIALS;
+
+    clock_t start2 = clock();
+    for (int i = 0; i < TRIALS; i++)
+        sink += bis_star(sorted, 0, n-1, key);
+    clock_t end2 = clock();
+
+    double t2 = (double)(end2 - start2) / CLOCKS_PER_SEC / TRIALS;
+
+    printf("\n================ RESULTS ================\n");
+    printf("BIS Time  : %.12f sec\n", t1);
+    printf("BIS* Time : %.12f sec\n", t2);
+
+    printf("\nSink: %d\n", sink);
+
+    printf("\nFastest: %s\n",
+           (t1 < t2) ? "BIS" : "BIS*");
+
+    free(data);
     free(sorted);
-
-    printf("\nPress Enter to exit the program.\n");
-    getchar();
-    getchar();
 
     return 0;
 }

@@ -7,7 +7,7 @@ Cumulative κάνοντας χρήση των αλγορίθμων Counting Sort
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-#include <time.h> 
+#include <time.h>
 
 #define DIRECTION 8
 #define YEAR 5
@@ -17,9 +17,9 @@ Cumulative κάνοντας χρήση των αλγορίθμων Counting Sort
 #define MAX_ROWS 111440
 
 
-//============================================ 
+//============================================
 // Δομή Εγγραφής
-//============================================ 
+//============================================
 
 typedef struct {
     char direction[DIRECTION];
@@ -47,79 +47,63 @@ void merge_sort(Record* array, int left, int right);
 void print_records(Record *data, int recordings, int limit);
 
 
-//============================================ 
+//============================================
 
 
 int load_csv(const char *filename, Record *data) {
-    FILE *fptr = fopen(filename, "r");
-    if(!fptr) {
-        printf("[ERROR] No file %s found.\n", filename);
-        return -1;
-    }
+    FILE *f = fopen(filename, "r");
+    if (!f) return -1;
 
-    char line[512]; //temp info saver
-    int count = 0;
+    char line[512];
+    int n = 0;
 
-    fgets(line, sizeof(line), fptr);
+    fgets(line, sizeof(line), f); // header
 
-    while (fgets(line, sizeof(line), fptr) && count < MAX_ROWS) {
-        line[strcspn(line, "\r\n")] = 0;
-
-        char *temp;
+    while (fgets(line, sizeof(line), f) && n < MAX_ROWS) {
         Record r;
         memset(&r, 0, sizeof(r));
 
-        temp = strtok(line, ",");
-        if(!temp) continue;
-        strncpy(r.direction, temp, DIRECTION-1);
+        char *t = strtok(line, ",");
+        strcpy(r.direction, t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.year, temp, YEAR-1);
+        t = strtok(NULL, ",");
+        strcpy(r.year, t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.date, temp, DATE-1);
+        t = strtok(NULL, ",");
+        strcpy(r.date, t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.weekday, temp, sizeof(r.weekday) - 1);
+        t = strtok(NULL, ",");
+        strcpy(r.weekday, t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.country, temp, sizeof(r.country) - 1);
+        t = strtok(NULL, ",");
+        strcpy(r.country, t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.commodity, temp, sizeof(r.commodity) - 1);
+        t = strtok(NULL, ",");
+        strcpy(r.commodity, t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.transport_mode, temp, sizeof(r.transport_mode) - 1);
+        t = strtok(NULL, ",");
+        strcpy(r.transport_mode, t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.measure, temp, sizeof(r.measure) - 1);
+        t = strtok(NULL, ",");
+        strcpy(r.measure, t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        r.value = atoll(temp);
+        t = strtok(NULL, ",");
+        r.value = atoll(t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        r.cumulative = atoll(temp);
+        t = strtok(NULL, ",");
+        r.cumulative = atoll(t);
 
-        data[count++] = r;
+        data[n++] = r;
     }
 
-    fclose(fptr);
-    return count;
+    fclose(f);
+    return n;
 }
 
 
 void counting_sort(Record *input, int recordings, Record *output, bool *works) {
     if (recordings <= 0) return;
-    
+
 
     //Step 1: find min + max value
     long long min = input[0].cumulative;
@@ -216,14 +200,14 @@ void print_records(Record *data, int recordings, int limit) {
     if (limit > recordings) {
         limit = recordings;
     }
-    
+
     for (int i=0; i<limit; i++) {
         printf("[%3d] Date: %-12s | Cumulative: %lld\n", i+1, data[i].date, data[i].cumulative);
     }
 }
 
 
-//============================================ 
+//============================================
 
 
 int main() {
@@ -240,6 +224,7 @@ int main() {
 
     if (!original || !count_in || !count_out || !merge_data || !temp_buffer) {
         printf("Memory Error\n");
+        count_works = false;
         return 1;
     }
 
@@ -256,6 +241,7 @@ int main() {
 
     // time counting sort
     clock_t count_start = clock();
+    count_works = true;
     counting_sort(count_in, n, count_out, &count_works);
     clock_t count_end = clock();
     double count_time = (double)(count_end - count_start) / CLOCKS_PER_SEC;
@@ -273,7 +259,7 @@ int main() {
     merge_sort(merge_data, 0, n-1);
     clock_t merge_end = clock();
     double merge_time = (double)(merge_end - merge_start) / CLOCKS_PER_SEC;
-    
+
     printf("Merging first 10 recordings.\n");
     print_records(merge_data, n, 10);
     printf("Merging Sort Time: %.6f seconds\n\n", merge_time);
@@ -291,13 +277,13 @@ int main() {
         printf("Fastest:  Merging Sort\n");
     }
 
-    
+
     printf("\nPress Enter to exit the program.\n");
     getchar();
 
     //Free memory
     free(original);
-    free(count_in);    
+    free(count_in);
     free(count_out);
     free(merge_data);
     free(temp_buffer);

@@ -3,21 +3,15 @@
 #include <string.h>
 #include <time.h>
 
-
-#define DIRECTION 8
-#define YEAR 5
-#define DATE 11
-#define WEEKDAY 10
-#define MAX_STR 64
 #define MAX_ROWS 111440
+#define MAX_STR 64
+#define TRIALS 50000
 
-
-// Δομ΄η Εγγραφ΄ης 
 typedef struct {
-    char direction[DIRECTION];
-    char year[YEAR];
-    char date[DATE];
-    char weekday[WEEKDAY];
+    char direction[16];
+    char year[8];
+    char date[16];
+    char weekday[16];
     char country[MAX_STR];
     char commodity[MAX_STR];
     char transport_mode[MAX_STR];
@@ -26,258 +20,225 @@ typedef struct {
     long long cumulative;
 } Record;
 
-//===========================================
-// search by Value
-//===========================================
+// ================= DATE -> INTEGER (KEY) =================
+long long dateToInt(const char *date) {
+    int d, m, y;
+    sscanf(date, "%d%*c%d%*c%d", &d, &m, &y);
+    return (long long)y * 10000 + m * 100 + d;
+}
 
-// calling functions
-int load_csv(const char *filename, Record *data);
-
-
-// Φόρτωση στοιχείων
+// ================= LOAD CSV =================
 int load_csv(const char *filename, Record *data) {
-    FILE *fptr = fopen(filename, "r");
-    if(!fptr) {
-        printf("[ERROR] No file %s found.\n", filename);
-        return -1;
-    }
+    FILE *f = fopen(filename, "r");
+    if (!f) return -1;
 
-    char line[512]; //temp info saver
-    int count = 0;
+    char line[512];
+    int n = 0;
 
-    fgets(line, sizeof(line), fptr);
+    fgets(line, sizeof(line), f); // header
 
-    while (fgets(line, sizeof(line), fptr) && count < MAX_ROWS) {
-        line[strcspn(line, "\r\n")] = 0;
-
-        char *temp;
+    while (fgets(line, sizeof(line), f) && n < MAX_ROWS) {
         Record r;
         memset(&r, 0, sizeof(r));
 
-        temp = strtok(line, ",");
-        if(!temp) continue;
-        strncpy(r.direction, temp, DIRECTION-1);
+        char *t = strtok(line, ",");
+        strcpy(r.direction, t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.year, temp, YEAR-1);
+        t = strtok(NULL, ",");
+        strcpy(r.year, t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.date, temp, DATE-1);
+        t = strtok(NULL, ",");
+        strcpy(r.date, t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.weekday, temp, sizeof(r.weekday) - 1);
+        t = strtok(NULL, ",");
+        strcpy(r.weekday, t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.country, temp, sizeof(r.country) - 1);
+        t = strtok(NULL, ",");
+        strcpy(r.country, t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.commodity, temp, sizeof(r.commodity) - 1);
+        t = strtok(NULL, ",");
+        strcpy(r.commodity, t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.transport_mode, temp, sizeof(r.transport_mode) - 1);
+        t = strtok(NULL, ",");
+        strcpy(r.transport_mode, t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.measure, temp, sizeof(r.measure) - 1);
+        t = strtok(NULL, ",");
+        strcpy(r.measure, t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        r.value = atoll(temp);
+        t = strtok(NULL, ",");
+        r.value = atoll(t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        r.cumulative = atoll(temp);
+        t = strtok(NULL, ",");
+        r.cumulative = atoll(t);
 
-        data[count++] = r;
+        data[n++] = r;
     }
 
-    fclose(fptr);
-    return count;
+    fclose(f);
+    return n;
 }
 
-
-// helpig functions
-
-void swap_Records(Record* data, int i, int j) {
-    Record temp;
-
-    memcpy(&temp, &data[i], sizeof(Record));
-    memcpy(&data[i], &data[j], sizeof(Record));
-    memcpy(&data[j], &temp, sizeof(Record));
+// ================= SWAP =================
+void swap(Record *a, Record *b) {
+    Record tmp = *a;
+    *a = *b;
+    *b = tmp;
 }
 
+// ================= HEAP SORT (by DATE) =================
+void heapify(Record *a, int n, int i) {
+    while (1) {
+        int largest = i;
+        int l = 2*i + 1;
+        int r = 2*i + 2;
 
-// Heap Sort
+        if (l < n && dateToInt(a[l].date) > dateToInt(a[largest].date))
+            largest = l;
 
-void heapify(Record *data, int size, int index) {
-    
-    while(1) {
-        int largest = index;
-        int li = 2*index + 1;
-        int ri = 2*index + 2;
+        if (r < n && dateToInt(a[r].date) > dateToInt(a[largest].date))
+            largest = r;
 
-        if (li < size && data[li].value > data[largest].value) {
-            largest = li;
-        }
+        if (largest == i) break;
 
-        if (ri < size && data[ri].value > data[largest].value) {
-            largest = ri;
-        }
-
-        if(largest == index) {
-            break;
-        }
-
-        swap_Records(data, largest, index);
-        index = largest;
-    }
-
-}
-
-void heapSort (Record *input, int size) {
-    if (size <= 0) {
-        return;
-    }
-    int n = size-1;
-    int half = size / 2 - 1;
-
-    for(int i= half; i >= 0; i--) {
-        heapify(input, size, i);
-    }
-
-    for(int i = size-1; i>0; i--) {
-        swap_Records(input, 0, i);
-        heapify(input, i, 0);
+        swap(&a[i], &a[largest]);
+        i = largest;
     }
 }
 
-//===========================================
-// search by Value
-//===========================================
-// Binary Search
+void heapSort(Record *a, int n) {
+    for (int i = n/2 - 1; i >= 0; i--)
+        heapify(a, n, i);
 
-int binarySearch(Record* input, int n, long long x) {
-    int low = 0;
-    int high = n-1;
+    for (int i = n - 1; i > 0; i--) {
+        swap(&a[0], &a[i]);
+        heapify(a, i, 0);
+    }
+}
 
-    while (low<=high) {
-        int mid = low + (high - low) / 2;
+// ================= BINARY SEARCH (by DATE) =================
+int binarySearch(Record *a, int n, long long key) {
+    int l = 0, r = n - 1;
 
-        if(input[mid].value == x) {
+    while (l <= r) {
+        int mid = l + (r - l) / 2;
+        long long midKey = dateToInt(a[mid].date);
+
+        if (midKey == key)
             return mid;
-        }
-
-        if (input[mid].value<x) {
-            low = mid +1;
-        } else {
-            high = mid-1;
-        }
+        else if (midKey < key)
+            l = mid + 1;
+        else
+            r = mid - 1;
     }
 
     return -1;
 }
 
-// Inerpolation Search
+// ================= INTERPOLATION SEARCH (by DATE) =================
+int interpolationSearch(Record *a, int l, int r, long long key) {
 
-int interpolationSearch(Record* input, int low, int high, long long x) {
-    int pos;
+    while (l <= r &&
+           key >= dateToInt(a[l].date) &&
+           key <= dateToInt(a[r].date)) {
 
-    if (low <= high && x >= input[low].value && x <= input[high].value) {
-        pos = low + (((double)(high-low)/(input[high].value-input[low].value))*(x-input[low].value));
+        long long left = dateToInt(a[l].date);
+        long long right = dateToInt(a[r].date);
 
-        if (input[pos].value == x) {
+        if (left == right) {
+            return (left == key) ? l : -1;
+        }
+
+        int pos = l +
+            (double)(r - l) *
+            (key - left) /
+            (right - left);
+
+        long long posKey = dateToInt(a[pos].date);
+
+        if (posKey == key)
             return pos;
-        }
 
-        if (input[pos].value <= x) {
-            return interpolationSearch(input, pos+1, high, x);
-        }
-
-        if (input[pos].value > x) {
-            return interpolationSearch(input, low, pos-1, x);
-        }
+        if (posKey < key)
+            l = pos + 1;
+        else
+            r = pos - 1;
     }
 
     return -1;
 }
 
+// ================= MAIN =================
 int main() {
-    const char *filename = "effects-of-covid-19-on-trade-at-15-december-2021-provisional.csv";
-    
-    //load data
-    Record *original = malloc(MAX_ROWS*sizeof(Record));
-    Record *binary_search = malloc(MAX_ROWS*sizeof(Record));
-    Record *interpolation_search = malloc(MAX_ROWS*sizeof(Record));
-    Record *sorted = malloc(MAX_ROWS*sizeof(Record));
-    
-    
-    if (!original || !binary_search || !interpolation_search || !sorted) {
-        printf("Memory Error\n");
+
+    Record *data = malloc(MAX_ROWS * sizeof(Record));
+    Record *sorted = malloc(MAX_ROWS * sizeof(Record));
+
+    int n = load_csv("effects-of-covid-19-on-trade-at-15-december-2021-provisional.csv", data);
+    if (n <= 0) {
+        printf("Error loading file\n");
         return 1;
     }
-    
-    int n= load_csv(filename, original);
-    if (n<=0) {
-        free(original);
-        return 1;
-    }
-    
-    printf("Loaded %d recordings from CSV.\n", n);
-    
-    memcpy(sorted, original, n*sizeof(Record));
-    
-    long long search;
-    printf("Value: ");
-    scanf("%lld", &search);
-    printf("\n\n");
-    
-    // sort by value
+
+    memcpy(sorted, data, n * sizeof(Record));
+
     heapSort(sorted, n);
-    
-    memcpy(binary_search, sorted, n*sizeof(Record));
-    memcpy(interpolation_search, sorted, n*sizeof(Record));
 
-    // time binary search
-    clock_t binary_start = clock();
-    binarySearch(binary_search, n, search);
-    clock_t binary_end = clock();
-    double binary_time = (double)(binary_end - binary_start) / CLOCKS_PER_SEC;
+    char inputDate[16];
+    printf("Enter Date (dd/mm/yyyy): ");
+    scanf("%s", inputDate);
 
-    printf("Binary Search Time: %.6f seconds\n\n", binary_time);
+    long long key = dateToInt(inputDate);
 
-    // time interpolation search
-    clock_t inter_start = clock();
-    interpolationSearch(interpolation_search, 0, n-1, search);
-    clock_t inter_end = clock();
-    double inter_time = (double)(inter_end - inter_start) / CLOCKS_PER_SEC;
-    
-    printf("Interpolation Search Time: %.6f seconds\n\n", inter_time);
+    volatile int sink = 0;
 
+    // ================= BINARY BENCHMARK =================
+    clock_t start = clock();
+    for (int i = 0; i < TRIALS; i++) {
+        sink += binarySearch(sorted, n, key);
+    }
+    clock_t end = clock();
 
-    // Comparison
-    printf("Binary Search: %.6f sec | O(logn)\n", binary_time);
-    printf("Interpolation Search: %.6f sec | O(log(logn))\n", inter_time);
-    if (binary_time < inter_time) {
-        printf("Fastest:  Binary Search\n");
+    double t1 = (double)(end - start) / CLOCKS_PER_SEC / TRIALS;
+
+    // ================= INTERPOLATION BENCHMARK =================
+    start = clock();
+    for (int i = 0; i < TRIALS; i++) {
+        sink += interpolationSearch(sorted, 0, n - 1, key);
+    }
+    end = clock();
+
+    double t2 = (double)(end - start) / CLOCKS_PER_SEC / TRIALS;
+
+    // ================= RESULT =================
+    int idx = binarySearch(sorted, n, key);
+    int r1 = binarySearch(sorted, n-1, key);
+    int r2 = interpolationSearch(sorted, 0, n-1, key);
+
+    if (r1 != -1) {
+        printf("\nBinary Search FOUND:\n");
+        printf("Date: %s\n", sorted[r1].date);
+        printf("Value: %lld\n", sorted[r1].value);
+        printf("Cumulative: %lld\n", sorted[r1].cumulative);
     } else {
-        printf("Fastest:  Interpolation Search\n");
+        printf("\nBinary Search NOT FOUND\n");
     }
 
-    //Free memory
-    free(original);
-    free(binary_search);    
-    free(interpolation_search);
-    free(sorted);
+    if (r2 != -1) {
+        printf("\nInterpolation Search FOUND:\n");
+        printf("Date: %s\n", sorted[r2].date);
+        printf("Value: %lld\n", sorted[r2].value);
+        printf("Cumulative: %lld\n", sorted[r2].cumulative);
+    } else {
+        printf("\nInterpolation Search NOT FOUND\n");
+    }
 
-    
-    printf("\nPress Enter to exit the program.\n");
-    getchar();
+    printf("\nBinary Search: %.10f sec\n", t1);
+    printf("Interpolation Search: %.10f sec\n", t2);
+    printf("\nConclution: ");
+    if (t1<t2) printf("Binary Search Faster\n"); else printf("Interpolation Search Faster\n");
+
+    free(data);
+    free(sorted);
 
     return 0;
 }

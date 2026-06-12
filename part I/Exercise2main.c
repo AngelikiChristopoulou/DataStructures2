@@ -33,69 +33,53 @@ int load_csv(const char *filename, Record *data);
 
 // Φόρτωση στοιχείων
 int load_csv(const char *filename, Record *data) {
-    FILE *fptr = fopen(filename, "r");
-    if(!fptr) {
-        printf("[ERROR] No file %s found.\n", filename);
-        return -1;
-    }
+    FILE *f = fopen(filename, "r");
+    if (!f) return -1;
 
-    char line[512]; //temp info saver
-    int count = 0;
+    char line[512];
+    int n = 0;
 
-    fgets(line, sizeof(line), fptr);
+    fgets(line, sizeof(line), f); // header
 
-    while (fgets(line, sizeof(line), fptr) && count < MAX_ROWS) {
-        line[strcspn(line, "\r\n")] = 0;
-
-        char *temp;
+    while (fgets(line, sizeof(line), f) && n < MAX_ROWS) {
         Record r;
         memset(&r, 0, sizeof(r));
 
-        temp = strtok(line, ",");
-        if(!temp) continue;
-        strncpy(r.direction, temp, DIRECTION-1);
+        char *t = strtok(line, ",");
+        strcpy(r.direction, t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.year, temp, YEAR-1);
+        t = strtok(NULL, ",");
+        strcpy(r.year, t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.date, temp, DATE-1);
+        t = strtok(NULL, ",");
+        strcpy(r.date, t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.weekday, temp, sizeof(r.weekday) - 1);
+        t = strtok(NULL, ",");
+        strcpy(r.weekday, t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.country, temp, sizeof(r.country) - 1);
+        t = strtok(NULL, ",");
+        strcpy(r.country, t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.commodity, temp, sizeof(r.commodity) - 1);
+        t = strtok(NULL, ",");
+        strcpy(r.commodity, t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.transport_mode, temp, sizeof(r.transport_mode) - 1);
+        t = strtok(NULL, ",");
+        strcpy(r.transport_mode, t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.measure, temp, sizeof(r.measure) - 1);
+        t = strtok(NULL, ",");
+        strcpy(r.measure, t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        r.value = atoll(temp);
+        t = strtok(NULL, ",");
+        r.value = atoll(t);
 
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        r.cumulative = atoll(temp);
+        t = strtok(NULL, ",");
+        r.cumulative = atoll(t);
 
-        data[count++] = r;
+        data[n++] = r;
     }
 
-    fclose(fptr);
-    return count;
+    fclose(f);
+    return n;
 }
 
 // helpig functions
@@ -115,7 +99,7 @@ void print_records(Record *data, int recordings, int limit) {
     }
     
     for (int i=0; i<limit; i++) {
-        printf("[%3d] Date: %-12s | Cumulative: %lld\n", i+1, data[i].date, data[i].cumulative);
+        printf("[%3d] Date: %-12s | Value: %lld\n", i+1, data[i].date, data[i].value);
     }
 }
 
@@ -161,38 +145,39 @@ void heapSort (Record *input, int size) {
 }
 
 // Quick Sort
+void partition_value(Record *data, int lo, int hi, int *lt, int *gt)
+{
+    long long pivot = data[lo].value;
 
-int parition(Record* data, int low, int high){
-    long long piv = data[low].value; // Pivot = first element
-    int i = low;
-    int j = high;
+    int i = lo;
+    *lt = lo;
+    *gt = hi;
 
-    while(i < j) {
-        while(data[i].value <= piv && i <= high - 1) {
+    while (i <= *gt) {
+        if (data[i].value < pivot) {
+            swap_Records(data, i, *lt);
+            (*lt)++;
             i++;
         }
-
-        while(data[j].value > piv && j >= low + 1) {
-            j--;
+        else if (data[i].value > pivot) {
+            swap_Records(data, i, *gt);
+            (*gt)--;
         }
-
-        if(i < j) {
-            swap_Records(data, i, j);
+        else {
+            i++;
         }
     }
-
-    swap_Records(data, low, j);
-    return j;
 }
 
-void quickSort(Record* data, int low, int high) {
-    if(low < high) {
+void quickSort(Record *data, int lo, int hi)
+{
+    if (lo >= hi) return;
 
-        int pi = parition(data, low, high);
+    int lt, gt;
+    partition_value(data, lo, hi, &lt, &gt);
 
-        quickSort(data, low, pi-1);
-        quickSort(data, pi + 1, high);
-    }
+    quickSort(data, lo, lt - 1);
+    quickSort(data, gt + 1, hi);
 }
 
 
@@ -225,7 +210,7 @@ int main() {
     heapSort(heap_sort, n);
     clock_t heap_end = clock();
     double heap_time = (double)(heap_end - heap_start) / CLOCKS_PER_SEC;
-    
+
     printf("Heap sort first 10 recordings.\n");
     print_records(heap_sort, n, 10);
     printf("Heap Sort Time: %.6f seconds\n\n", heap_time);
@@ -235,7 +220,7 @@ int main() {
     quickSort(quick_sort, 0, n-1);
     clock_t quick_end = clock();
     double quick_time = (double)(quick_end - quick_start) / CLOCKS_PER_SEC;
-    
+
     printf("Quick sort first 10 recordings.\n");
     print_records(quick_sort, n, 10);
     printf("Quick Sort Time: %.6f seconds\n\n", quick_time);
@@ -250,13 +235,12 @@ int main() {
         printf("Fastest:  Quick Sort\n");
     }
 
-    
     printf("\nPress Enter to exit the program.\n");
     getchar();
 
     //Free memory
     free(original);
-    free(heap_sort);    
+    free(heap_sort);
     free(quick_sort);
 
     return 0;
