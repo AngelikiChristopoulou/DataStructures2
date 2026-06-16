@@ -1,21 +1,25 @@
-/* Η εφαρμογή διαβάζει αρχικά το αρχείο και δημιουργεί ένα Δένδρο BST (Ισοζυγισμένο Δυαδικό 
-* Δέντρο )  στο οποίο κάθε κόμβος του διατηρεί την εγγραφή (Date, Cumulative της ημέρας αυτής). 
-* Το BST  διατάσσεται ως προς την ΗΜΕΡΟΜΗΝΙΑ (Date) και υλοποιείται με δυναμική διαχείριση 
-* μνήμης. Προτιμότερες επιλογές AVL, red-black, (2,4) δέντρα. Μετά την δημιουργία του BST  η 
-* εφαρμογή εμφανίζει ένα μενού με τις ακόλουθες επιλογές: 
-* 1. Απεικόνιση του BST  με ενδο-διατεταγμένη διάσχιση. Κάθε απεικόνιση θα πρέπει να περιέχει 
-* μια επικεφαλίδα με τους τίτλους των στοιχείων των εγγραφών που απεικονίζονται.  
-* 2. Αναζήτηση της τιμής Cumulative βάσει ΗΜΕΡΟΜΗΝΙΑΣ (Date) που θα δίνεται από το 
-* χρήστη. 
-* 3. Τροποποίηση του περιεχομένου του πεδίου Cumulative που αντιστοιχεί σε συγκεκριμένη 
-* ΗΜΕΡΟΜΗΝΙΑ (Date).  
-* 4. Διαγραφή μιας εγγραφής που αντιστοιχεί σε συγκεκριμένη ΗΜΕΡΟΜΗΝΙΑ (Date). 
-* 5. Έξοδος από την εφαρμογή.  
+/* 
+* Υλοποιήστε το (Α) κάνοντας χρήση HASHING με αλυσίδες, αντί BST. Η συνάρτηση κατακερματισμού θα υπολογίζεται ως το 
+* υπόλοιπο (modulo) της διαίρεσης του αθροίσματος των κωδικών ASCII των επιμέρους χαρακτήρων που απαρτίζουν την 
+* ΗΜΕΡΟΜΗΝΙΑ με ένα περιττό αριθμό m που συμβολίζει το πλήθος των κάδων (buckets). Π.χ. για ΗΜΕΡΟΜΗΝΙΑ=”
+* 15/12/2021” και m=11, ισχύει:
+* 
+* Hash("15/12/2021")= [ASCII(‘1’)+ ASCII(‘5’)+ ASCII(‘/’)+ ASCII(‘1’)+ ASCII(‘2’)+ ASCII(‘/’)+ ASCII(‘2’)+ ASCII(‘0’)+ 
+* ASCII(‘2’)+ ASCII(‘1’)] mod 11.
+* 
+* Το πρόγραμμα θα εμφανίζει ένα μενού με τις ακόλουθες επιλογές:
+*
+* 1. Αναζήτηση Τιμής Cumulative βάσει της ΗΜΕΡΟΜΗΝΙΑΣ που θα δίνεται από το χρήστη.
+* 2. Τροποποίηση των στοιχείων εγγραφής βάσει ΗΜΕΡΟΜΗΝΙΑΣ που θα δίνεται από το χρήστη. 
+*     Η τροποποίηση προφανώς αφορά ΜΟΝΟ το πεδίο Cumulative.
+* 3. Διαγραφή μιας εγγραφής από τον πίνακα κατακερματισμού βάσει ΗΜΕΡΟΜΗΝΙΑΣ που θα δίνεται από το χρήστη.
+* 4. Έξοδος από την εφαρμογή.  
 */
 
 // oooooooooooooooooooooooo
 //       Useage: AVL
 // oooooooooooooooooooooooo
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,7 +29,7 @@
 
 #define DIRECTION 8
 #define YEAR 5
-#define DATE 3
+#define DATE 11
 #define WEEKDAY 10
 #define MAX_STR 64
 #define MAX_ROWS 111500
@@ -38,7 +42,7 @@
 typedef struct {
     char direction[DIRECTION];
     char year[YEAR];
-    int date[DATE];
+    char date[DATE];
     char weekday[WEEKDAY];
     char country[MAX_STR];
     char commodity[MAX_STR];
@@ -48,6 +52,12 @@ typedef struct {
     long long cumulative;
 } Record;
 
+
+typedef struct Node {
+    Record* record;
+
+    struct Node* next;
+} Node;
 
 
 // ==============================================
@@ -90,20 +100,9 @@ int load_csv(const char *filename, Record *data) {
         if(!temp) continue;
         strncpy(r.year, temp, YEAR-1);
 
-        // ~~~~~~~~~~~~~~~~
-        // take the date
-        temp = strtok(NULL, "/");
-        if(!temp) continue;
-        r.date[0] = strtol(temp, NULL, 10);
-
-        temp = strtok(NULL, "/");
-        if(!temp) continue;
-        r.date[1] = strtol(temp, NULL, 10);
-        
         temp = strtok(NULL, ",");
         if(!temp) continue;
-        r.date[2] = strtol(temp, NULL, 10);
-        // ~~~~~~~~~~~~~~~~
+        strncpy(r.date, temp, DATE-1);
 
         temp = strtok(NULL, ",");
         if(!temp) continue;
@@ -146,7 +145,37 @@ int load_csv(const char *filename, Record *data) {
 // ==============================================
 
 
+void initializeMap( hashMap* map, int arraySize) {
+    map->capacity = MAX_ROWS;
+    map->numOfElements = arraySize;
 
+    map->array = (Node**)malloc(sizeof(Node*)*map->capacity);
+}
+
+int hash(char* date) {
+    int sum = 0;
+    for(int i = 0; i < DATE; i ++) {
+        sum += date[i];
+    }
+    return (sum % DATE);
+}
+
+
+// ==============================================
+// Node functions
+// ==============================================
+
+
+Node* createNode(Record* value) {
+    Node* newNode = malloc(sizeof(Node));
+    if (newNode == NULL) {
+        fprintf(stderr, "Memory allocation failed\n");
+        exit(EXIT_FAILURE);
+    }
+    newNode->record  = value;
+    newNode->next  = NULL;
+    return newNode;
+}
 
 
 // ==============================================
@@ -181,7 +210,7 @@ int printMenu() {
 // ==============================================
 
 
-
+int insert(Node** table, Record)
 
 
 // ==============================================
@@ -192,36 +221,11 @@ int printMenu() {
 int main() {
     const char *filename = "effects-of-covid-19-on-trade-at-15-december-2021-provisional.csv";
     
-    //load data
-    Record *original = malloc(MAX_ROWS*sizeof(Record));
-    Record recordings[MAX_ROWS];
     
-    if (!original) {
-        printf("Memory Error\n");
-        return 1;
-    }
+
     
-    int n = load_csv(filename, original);
-    if (n<=0) {
-        free(original);
-        return 1;
-    }
-
-    int choice = 0;
-    int date[3];
-    long long cumulative;
-
-    while(choice!=5) {
-
-        choice = printMenu();
-
-        switch(choice) {
-            default:
-                printf("Invalid choice.\n");
-        }
-    }
-
-    free(original);
+    printf("\nPress Enter to exit the program.\n");
+    getchar();
 
     return 0;
 }
