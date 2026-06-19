@@ -1,22 +1,33 @@
+/*
+ * ============================================================
+ *  All Exercises Combined (A-C)
+ *  Dataset: effects-of-covid-19-on-trade-at-15-december-2021-provisional.csv
+ * ============================================================
+ *
+ *  Exercise A: BST sorted by Date
+ *  Exercise B: BST sorted by Cumulative
+ *  Exercise C: sorted by Hashing and Chaining
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
 #include <time.h> 
 
+/* Buffer size constants sized to fit the fixed-width CSV fields */
 #define DIRECTION 8
 #define YEAR 5
 #define DATE 3
-#define DATEC 11
+#define DATEC 11 // used only in C for Haching
 #define WEEKDAY 10
 #define MAX_STR 64
 #define MAX_ROWS 111440
 
 
-//============================================ 
-// Structures
-//============================================ 
-
+/* One row from the CSV becomes one Record.
+   Value and Cumulative are kept as 64-bit integers because the
+   trade figures exceed the range of a 32-bit int. */
 typedef struct {
     char direction[DIRECTION];
     char year[YEAR];
@@ -30,6 +41,8 @@ typedef struct {
     long long cumulative;
 } Record;
 
+// we use different nodes for A and B because for B we need a 2-dimensional
+// list, while for A one dimension is enough
 typedef struct NodeA {
     Record* record;
     struct NodeA* left;
@@ -51,7 +64,8 @@ typedef struct NodeB {
     EqNode* equal;
 } NodeB;
 
-
+// used only for C because of Hashing
+// includes Date as a string
 typedef struct {
     char direction[DIRECTION];
     char year[YEAR];
@@ -65,6 +79,7 @@ typedef struct {
     long long cumulative;
 } RecordC;
 
+// single line list for C
 typedef struct NodeC {
     RecordC* record;
     struct NodeC* next;
@@ -77,10 +92,11 @@ typedef struct {
 }HashMap;
 
 // ==============================================
-// Recording related functions
+// SHARED UTILITY FUNCTIONS
 // ==============================================
 
-
+/* Reads every data row from the CSV into the pre-allocated data array.
+   Returns the number of rows successfully parsed. */
 int load_csv(const char *filename, Record *data) {
     FILE *fptr = fopen(filename, "r");
     if(!fptr) {
@@ -158,78 +174,7 @@ int load_csv(const char *filename, Record *data) {
     return count;
 }
 
-int load_csv_C(const char *filename, RecordC *data) {
-    FILE *fptr = fopen(filename, "r");
-    if(!fptr) {
-        printf("[ERROR] No file %s found.\n", filename);
-        return -1;
-    }
-
-    char line[512]; //temp info saver
-    int count = 0;
-
-    fgets(line, sizeof(line), fptr);
-
-    while (fgets(line, sizeof(line), fptr) && count < MAX_ROWS) {
-        line[strcspn(line, "\r\n")] = 0;
-
-        char *temp;
-        RecordC r;
-        memset(&r, 0, sizeof(r));
-
-        temp = strtok(line, ",");
-        if(!temp) continue;
-        strncpy(r.direction, temp, DIRECTION-1);
-
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.year, temp, YEAR-1);
-
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.date, temp, DATEC-1);
-
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.weekday, temp, sizeof(r.weekday) - 1);
-
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.country, temp, sizeof(r.country) - 1);
-
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.commodity, temp, sizeof(r.commodity) - 1);
-
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.transport_mode, temp, sizeof(r.transport_mode) - 1);
-
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        strncpy(r.measure, temp, sizeof(r.measure) - 1);
-
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        r.value = atoll(temp);
-
-        temp = strtok(NULL, ",");
-        if(!temp) continue;
-        r.cumulative = atoll(temp);
-
-        data[count++] = r;
-    }
-
-    fclose(fptr);
-    return count;
-}
-
-
-// ==============================================
-// Helping functions
-// ==============================================
-
-
+/* It compares the dates so we can sort the nodes on the BST properly*/
 int compareDates(int* x, int* y) {
     if(x[2] != y[2]) return x[2] - y[2];
     if(x[1] != y[1]) return x[1] - y[1];
@@ -237,11 +182,21 @@ int compareDates(int* x, int* y) {
 }
 
 
+/* ============================================================
+ *  EXERCISE A – Counting Sort & Merge Sort  (by Cumulative)
+ * ============================================================ */
 
-// ==============================================
-// Menu functions
-// ==============================================
-
+/*
+ * COUNTING SORT LOGIC:
+ * Counting sort is a non-comparison sort. Instead of comparing elements
+ * it counts how many times each distinct key value appears, then uses
+ * those counts (as prefix sums) to place every record directly into its
+ * correct output position in O(n + k) time, where k is the value range.
+ *
+ * Limitation: k must be small enough to allocate a count array.
+ * The Cumulative field spans billions of dollars, making k enormous —
+ * so the algorithm detects this and reports failure rather than crashing.
+ */
 
 int printMenuBSTorHashing() {
     int choice;
@@ -759,6 +714,77 @@ void insertToMap(HashMap* map, RecordC* value);
 int searchByDate(HashMap* map, char* date);
 void modifyByDate(HashMap* map, char* date);
 void deleteByDate(HashMap* map, char* date);
+
+// Records 
+
+/* Reads every data row from the CSV into the pre-allocated data array.
+   Returns the number of rows successfully parsed. 
+   This takes the date as a string instead of an array of integers*/
+int load_csv_C(const char *filename, RecordC *data) {
+    FILE *fptr = fopen(filename, "r");
+    if(!fptr) {
+        printf("[ERROR] No file %s found.\n", filename);
+        return -1;
+    }
+
+    char line[512]; //temp info saver
+    int count = 0;
+
+    fgets(line, sizeof(line), fptr);
+
+    while (fgets(line, sizeof(line), fptr) && count < MAX_ROWS) {
+        line[strcspn(line, "\r\n")] = 0;
+
+        char *temp;
+        RecordC r;
+        memset(&r, 0, sizeof(r));
+
+        temp = strtok(line, ",");
+        if(!temp) continue;
+        strncpy(r.direction, temp, DIRECTION-1);
+
+        temp = strtok(NULL, ",");
+        if(!temp) continue;
+        strncpy(r.year, temp, YEAR-1);
+
+        temp = strtok(NULL, ",");
+        if(!temp) continue;
+        strncpy(r.date, temp, DATEC-1);
+
+        temp = strtok(NULL, ",");
+        if(!temp) continue;
+        strncpy(r.weekday, temp, sizeof(r.weekday) - 1);
+
+        temp = strtok(NULL, ",");
+        if(!temp) continue;
+        strncpy(r.country, temp, sizeof(r.country) - 1);
+
+        temp = strtok(NULL, ",");
+        if(!temp) continue;
+        strncpy(r.commodity, temp, sizeof(r.commodity) - 1);
+
+        temp = strtok(NULL, ",");
+        if(!temp) continue;
+        strncpy(r.transport_mode, temp, sizeof(r.transport_mode) - 1);
+
+        temp = strtok(NULL, ",");
+        if(!temp) continue;
+        strncpy(r.measure, temp, sizeof(r.measure) - 1);
+
+        temp = strtok(NULL, ",");
+        if(!temp) continue;
+        r.value = atoll(temp);
+
+        temp = strtok(NULL, ",");
+        if(!temp) continue;
+        r.cumulative = atoll(temp);
+
+        data[count++] = r;
+    }
+
+    fclose(fptr);
+    return count;
+}
 
 // Hash functions
 
