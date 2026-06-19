@@ -55,9 +55,14 @@ typedef struct {
 
 typedef struct Node {
     Record* record;
-
     struct Node* next;
 } Node;
+
+typedef struct {
+    Node **buckets;
+    int m;
+    int totalRecords;
+}HashMap;
 
 
 // ==============================================
@@ -144,37 +149,59 @@ int load_csv(const char *filename, Record *data) {
 // Hash related functions
 // ==============================================
 
-
-void initializeMap( hashMap* map, int arraySize) {
-    map->capacity = MAX_ROWS;
-    map->numOfElements = arraySize;
-
-    map->array = (Node**)malloc(sizeof(Node*)*map->capacity);
-}
-
-int hash(char* date) {
-    int sum = 0;
-    for(int i = 0; i < DATE; i ++) {
+int hash_date(char* date, int m) {
+    unsigned long sum = 0;
+    for(int i = 0; i < DATE-1; i ++) {
         sum += date[i];
     }
-    return (sum % DATE);
+    return (int)(sum % (unsigned long)m);
 }
 
+HashMap* createMap(int m) {
+    HashMap* map = malloc(sizeof(HashMap));
+    if(!map) {
+        fprintf(stderr, "Memory allocation failed\n");
+        exit(EXIT_FAILURE);
+    }
 
-// ==============================================
-// Node functions
-// ==============================================
+    map->m = m;
+    map->totalRecords = 0;
+    map->buckets = calloc(m,sizeof(Node *));
+    if(!map->buckets) {
+        fprintf(stderr, "Memory allocation failed\n");
+        exit(EXIT_FAILURE);
+    }
 
+    return map;
+}
 
-Node* createNode(Record* value) {
+void destroyMap(HashMap* map) {
+    for(int i = 0; i < map->m; i++) {
+        Node* now = map->buckets[i];
+        while(now) {
+            Node* temp = now->next;
+            free(now);
+            now = temp;
+        }
+    }
+
+    free(map->buckets);
+    free(map);
+}
+
+void insertToMap(HashMap* map, Record* value) {
+    int index = hash_date(value->date, map->m);
+
     Node* newNode = malloc(sizeof(Node));
     if (newNode == NULL) {
         fprintf(stderr, "Memory allocation failed\n");
         exit(EXIT_FAILURE);
     }
-    newNode->record  = value;
-    newNode->next  = NULL;
-    return newNode;
+
+    newNode->record = value;
+    newNode->next = map->buckets[index];
+    map->buckets[index] = newNode;
+    map->totalRecords++;
 }
 
 
@@ -182,22 +209,14 @@ Node* createNode(Record* value) {
 // Helping functions
 // ==============================================
 
-
-int compareDates(int* x, int* y) {
-    if(x[2] != y[2]) return x[2] - y[2];
-    if(x[1] != y[1]) return x[1] - y[1];
-    return x[0] - y[0];
-}
-
 int printMenu() {
     int choice;
 
     printf("\n=======MENU=======\n");
-    printf("1 => In-order Display\n");
-    printf("2 => Search by date\n");
-    printf("3 => Modify cumulative\n");
-    printf("4 => Delete by date\n");
-    printf("5 => Exit\n");
+    printf("1 => Search Cumulative by Date\n");
+    printf("2 => Modify Cumulative by Date\n");
+    printf("3 => Delete Record by Date\n");
+    printf("4 => Exit\n");
     printf("Choice: ");
     scanf("%d", &choice);
 
@@ -210,7 +229,86 @@ int printMenu() {
 // ==============================================
 
 
-int insert(Node** table, Record)
+int searchByDate(HashMap* map, char* date) {
+    int index = hash_date(date, map->m);
+    Node *now = map->buckets[index];
+    bool found = false;
+
+    printf("\n========== Results for date: %s ==========\n", date);
+
+    while(now) {
+        if(strcmp(now->record->date, date) == 0) {
+            printf("\tCumulative: %lld\n", now->record->cumulative);
+            found = true;
+        }
+        now = now->next;
+    }
+
+    if(!found) {
+        printf("[!] No Record in this date: %s\n",date);
+    }
+}
+
+void modifyByDate(HashMap* map, char* date) {
+    int index = hash_date(date, map->m);
+    Node *now = map->buckets[index]; 
+    bool found = false;
+    long long newCumulative;
+
+    while(now) {
+        if(strcmp(now->record->date, date) == 0) {
+            printf("Current record : \t Cumulative: %lld\n", now->record->cumulative);
+
+            printf("New Cumulative: ");
+            if (scanf("%lld", &newCumulative) != 1) {
+                printf("Value not acceptable.\n");
+                while(getchar() != '\n');
+                now = now->next;
+                continue;
+            }
+
+            now->record->cumulative = newCumulative;
+            printf("Value updated : \tCumulative = %lld\n", newCumulative);
+            found = true;
+        }
+        now = now->next;
+    }
+
+    if(!found) {
+        printf("[!] No Record in this date: %s\n",date);
+    }
+}
+
+void deleteByDate(HashMap* map, char* date) {
+    int index = hash_date(date, map->m);
+    Node *now = map->buckets[index]; 
+    Node *before = NULL; 
+    bool found = false;
+
+    while(now) {
+        if(strcmp(now->record->date, date) == 0) {
+            Node* deleting = now;
+            if(before) {
+                before->next = now->next;
+            } else {
+                map->buckets[index] = now->next;
+            }
+
+            now = now->next;
+            free(deleting);
+            map->totalRecords--;
+            found = true;
+        } else {
+            before = now;
+            now = now->next;
+        }
+        
+    }
+
+    if(!found) {
+        printf("[!] No Record in this date: %s\n",date);
+    }
+}
 
 
 // ==============================================
@@ -221,11 +319,60 @@ int insert(Node** table, Record)
 int main() {
     const char *filename = "effects-of-covid-19-on-trade-at-15-december-2021-provisional.csv";
     
+    //load data
+    Record *original = malloc(MAX_ROWS*sizeof(Record));
     
+    if (!original) {
+        printf("Memory Error\n");
+        return 1;
+    }
+    
+    int n = load_csv(filename, original);
+    if (n<=0) {
+        free(original);
+        return 1;
+    }
 
-    
-    printf("\nPress Enter to exit the program.\n");
-    getchar();
+    HashMap* map = createMap(DATE);
+
+    for(int i=0; i<n; i++) {
+        insertToMap(map, &original[i]);
+    }
+
+    int choice = 0;
+    char date[DATE+4];
+
+    while(choice!=4) {
+
+        choice = printMenu();
+        getchar();
+
+        if(choice == 1 || choice == 2 || choice ==3) {
+            printf("Enter the date (e.g. 13/03/2018): ");
+            if(!fgets(date, sizeof(date), stdin)) continue;
+            date[strcspn(date, "\r\n")] = 0;
+        }
+
+        switch(choice) {
+            case 1:
+                searchByDate(map,date);
+                break;
+            case 2:
+                modifyByDate(map,date);
+                break;
+            case 3:
+                deleteByDate(map,date);
+                break;
+            case 4:
+                printf("Ending program. . .\n");
+                break;
+            default:
+                printf("Invalid choice.\n");
+        }
+    }
+
+    destroyMap(map);
+    free(original);
 
     return 0;
 }
